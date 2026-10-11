@@ -1,9 +1,9 @@
 -- test.lua
--- Tests every PotatoUI element type with console output
--- Run this in your executor on any game after PotatoUI.lua is live on your repo
+-- Add to loader.lua: [game.PlaceId] = "test.lua"
+-- UI.lua must be live on your repo
 
 local UI = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/divso123/PotatoUI/main/UI.lua"
+    "https://raw.githubusercontent.com/divso123/script/main/UI.lua"
 ))()
 
 -- ══════════════════════════════════════
@@ -57,7 +57,6 @@ local tog2 = tab1:CreateToggle({
 
 tab1:CreateSeparator()
 
--- button that reads toggle states
 tab1:CreateButton({
     Name     = "Read Both Toggles",
     Callback = function()
@@ -66,7 +65,6 @@ tab1:CreateButton({
     end
 })
 
--- button that flips toggle A programmatically
 tab1:CreateButton({
     Name     = "Flip Toggle A",
     Callback = function()
@@ -159,13 +157,9 @@ local box = tab3:CreateTextbox({
     Name        = "Say Something",
     Placeholder = "type here then press Enter",
     Default     = "",
-    Callback    = function(val)  -- fires on Enter
+    Callback    = function(val)
         print("[PotatoUI] Textbox submitted:", val)
     end,
-    ChangedCallback = function(val)  -- fires on every keystroke
-        -- commented out by default — noisy
-        -- print("[PotatoUI] Textbox changed:", val)
-    end
 })
 
 tab3:CreateButton({
@@ -250,4 +244,4 @@ tab4:CreateButton({
     end
 })
 
-print("[PotatoUI] Test script loaded — all tabs ready")
+print("[PotatoUI] Test script loaded via loader.lua — all tabs ready")
