@@ -1,4 +1,4 @@
-# PotatoUI Script Hub
+# DivineSoul Script Hub
 
 A Roblox script hub built on a custom UI library (`UI.lua`).  
 All scripts in this repo use **only** the bundled `UI.lua` — no Rayfield, no Orion, no LinoriaLib.
