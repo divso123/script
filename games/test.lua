@@ -3,7 +3,7 @@
 -- Run this in your executor on any game after PotatoUI.lua is live on your repo
 
 local UI = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/YOURNAME/PotatoUI/main/PotatoUI.lua"
+    "https://raw.githubusercontent.com/divso123/PotatoUI/main/UI.lua"
 ))()
 
 -- ══════════════════════════════════════
