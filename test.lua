@@ -1,6 +1,5 @@
 -- test.lua
--- Add to loader.lua: [game.PlaceId] = "test.lua"
--- UI.lua must be live on your repo
+-- uses AirFlow (SakuraFlower) API loaded from your UI.lua
 
 local UI = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/divso123/script/main/UI.lua"
@@ -9,85 +8,101 @@ local UI = loadstring(game:HttpGet(
 -- ══════════════════════════════════════
 -- WINDOW
 -- ══════════════════════════════════════
-local win = UI:CreateWindow({
-    Title  = "PotatoUI Test",
-    Width  = 520,
-    Height = 380,
+local Window = UI:Window({
+    Title   = "PotatoUI Test",
+    Theme   = "Midnight",   -- swap to: Sakura, Nebula, Dracula, Ocean, etc.
+    Intro   = false,
 })
 
 -- ══════════════════════════════════════
--- TAB 1 — BUTTONS & TOGGLES
+-- TAB 1 — BUTTONS
 -- ══════════════════════════════════════
-local tab1 = win:CreateTab("Buttons")
+local tab1 = Window:Tab({ Name = "Buttons", Icon = "lucide:mouse-pointer-click" })
 
-tab1:CreateLabel("— Button Tests —")
+tab1:Section("Button Tests")
 
-tab1:CreateButton({
+tab1:Button({
     Name     = "Basic Button",
+    Desc     = "Prints a message to console",
     Callback = function()
-        print("[PotatoUI] Basic Button clicked")
+        print("[Test] Basic Button clicked")
     end
 })
 
-tab1:CreateButton({
+tab1:Button({
     Name     = "Print Player Name",
+    Desc     = "Prints your username",
     Callback = function()
-        print("[PotatoUI] Player:", game.Players.LocalPlayer.Name)
+        print("[Test] Player:", game.Players.LocalPlayer.Name)
     end
 })
 
-tab1:CreateSeparator()
-tab1:CreateLabel("— Toggle Tests —")
+tab1:Button({
+    Name     = "Print PlaceId",
+    Desc     = "Useful for adding to loader.lua",
+    Callback = function()
+        print("[Test] PlaceId:", game.PlaceId)
+    end
+})
 
-local tog1 = tab1:CreateToggle({
-    Name     = "Toggle A (default OFF)",
+-- ══════════════════════════════════════
+-- TAB 2 — TOGGLES
+-- ══════════════════════════════════════
+local tab2 = Window:Tab({ Name = "Toggles", Icon = "lucide:toggle-left" })
+
+tab2:Section("Toggle Tests")
+
+local tog1 = tab2:Toggle({
+    Name     = "Toggle A",
+    Desc     = "Starts OFF",
     Default  = false,
-    Callback = function(state)
-        print("[PotatoUI] Toggle A:", state)
+    Callback = function(val)
+        print("[Test] Toggle A:", val)
     end
 })
 
-local tog2 = tab1:CreateToggle({
-    Name     = "Toggle B (default ON)",
+local tog2 = tab2:Toggle({
+    Name     = "Toggle B",
+    Desc     = "Starts ON",
     Default  = true,
-    Callback = function(state)
-        print("[PotatoUI] Toggle B:", state)
+    Callback = function(val)
+        print("[Test] Toggle B:", val)
     end
 })
 
-tab1:CreateSeparator()
+tab2:Divider()
 
-tab1:CreateButton({
+tab2:Button({
     Name     = "Read Both Toggles",
     Callback = function()
-        print("[PotatoUI] Toggle A value:", tog1:GetValue())
-        print("[PotatoUI] Toggle B value:", tog2:GetValue())
+        print("[Test] Toggle A:", tog1:Get())
+        print("[Test] Toggle B:", tog2:Get())
     end
 })
 
-tab1:CreateButton({
+tab2:Button({
     Name     = "Flip Toggle A",
     Callback = function()
-        local current = tog1:GetValue()
-        tog1:SetValue(not current)
-        print("[PotatoUI] Flipped Toggle A to:", not current)
+        tog1:Set(not tog1:Get())
     end
 })
 
 -- ══════════════════════════════════════
--- TAB 2 — SLIDERS
+-- TAB 3 — SLIDERS
 -- ══════════════════════════════════════
-local tab2 = win:CreateTab("Sliders")
+local tab3 = Window:Tab({ Name = "Sliders", Icon = "lucide:sliders-horizontal" })
 
-tab2:CreateLabel("— Slider Tests —")
+tab3:Section("Slider Tests")
 
-local spd = tab2:CreateSlider({
+local spd = tab3:Slider({
     Name     = "Walk Speed",
     Min      = 16,
     Max      = 300,
     Default  = 16,
+    Step     = 1,
+    Suffix   = " spd",
     Callback = function(val)
-        print("[PotatoUI] WalkSpeed slider:", val)
+        print("[Test] WalkSpeed:", val)
         local char = game.Players.LocalPlayer.Character
         if char and char:FindFirstChild("Humanoid") then
             char.Humanoid.WalkSpeed = val
@@ -95,13 +110,14 @@ local spd = tab2:CreateSlider({
     end
 })
 
-local jp = tab2:CreateSlider({
+local jp = tab3:Slider({
     Name     = "Jump Power",
     Min      = 0,
     Max      = 200,
     Default  = 50,
+    Step     = 1,
     Callback = function(val)
-        print("[PotatoUI] JumpPower slider:", val)
+        print("[Test] JumpPower:", val)
         local char = game.Players.LocalPlayer.Character
         if char and char:FindFirstChild("Humanoid") then
             char.Humanoid.JumpPower = val
@@ -109,139 +125,105 @@ local jp = tab2:CreateSlider({
     end
 })
 
-tab2:CreateSeparator()
+tab3:Divider()
 
-tab2:CreateButton({
+tab3:Button({
     Name     = "Read Slider Values",
     Callback = function()
-        print("[PotatoUI] Speed:", spd:GetValue(), "| Jump:", jp:GetValue())
+        print("[Test] Speed:", spd:Get(), "| Jump:", jp:Get())
     end
 })
 
-tab2:CreateButton({
+tab3:Button({
     Name     = "Reset Sliders",
     Callback = function()
-        spd:SetValue(16)
-        jp:SetValue(50)
-        print("[PotatoUI] Sliders reset")
+        spd:Set(16)
+        jp:Set(50)
+        print("[Test] Sliders reset")
     end
 })
 
 -- ══════════════════════════════════════
--- TAB 3 — DROPDOWN & TEXTBOX
+-- TAB 4 — DROPDOWN
 -- ══════════════════════════════════════
-local tab3 = win:CreateTab("Input")
+local tab4 = Window:Tab({ Name = "Dropdown", Icon = "lucide:chevrons-up-down" })
 
-tab3:CreateLabel("— Dropdown Tests —")
+tab4:Section("Dropdown Tests")
 
-local drop = tab3:CreateDropdown({
+local drop = tab4:Dropdown({
     Name    = "Pick a Color",
-    Options = {"Red", "Green", "Blue", "Purple", "Orange"},
+    Options = { "Red", "Green", "Blue", "Purple", "Orange" },
     Default = "Red",
     Callback = function(val)
-        print("[PotatoUI] Dropdown selected:", val)
+        print("[Test] Dropdown selected:", val)
     end
 })
 
-tab3:CreateButton({
+tab4:Button({
     Name     = "Read Dropdown",
     Callback = function()
-        print("[PotatoUI] Current dropdown value:", drop:GetValue())
-    end
-})
-
-tab3:CreateSeparator()
-tab3:CreateLabel("— Textbox Tests —")
-
-local box = tab3:CreateTextbox({
-    Name        = "Say Something",
-    Placeholder = "type here then press Enter",
-    Default     = "",
-    Callback    = function(val)
-        print("[PotatoUI] Textbox submitted:", val)
-    end,
-})
-
-tab3:CreateButton({
-    Name     = "Read Textbox",
-    Callback = function()
-        print("[PotatoUI] Textbox value:", box:GetValue())
-    end
-})
-
-tab3:CreateButton({
-    Name     = "Clear Textbox",
-    Callback = function()
-        box:SetValue("")
-        print("[PotatoUI] Textbox cleared")
+        print("[Test] Current:", drop:Get())
     end
 })
 
 -- ══════════════════════════════════════
--- TAB 4 — LIVE GAME INFO
+-- TAB 5 — INFO
 -- ══════════════════════════════════════
-local tab4 = win:CreateTab("Info")
+local tab5 = Window:Tab({ Name = "Info", Icon = "lucide:info" })
 
-tab4:CreateLabel("— Live Game Info —")
+tab5:Section("Live Game Info")
 
-tab4:CreateButton({
-    Name     = "Print PlaceId",
-    Callback = function()
-        print("[PotatoUI] PlaceId:", game.PlaceId)
-    end
-})
-
-tab4:CreateButton({
+tab5:Button({
     Name     = "Print Player Info",
     Callback = function()
         local p = game.Players.LocalPlayer
-        print("[PotatoUI] Name:", p.Name)
-        print("[PotatoUI] UserId:", p.UserId)
-        print("[PotatoUI] Team:", p.Team and p.Team.Name or "none")
+        print("[Test] Name:", p.Name)
+        print("[Test] UserId:", p.UserId)
+        print("[Test] Team:", p.Team and p.Team.Name or "none")
     end
 })
 
-tab4:CreateButton({
-    Name     = "Print Character Position",
+tab5:Button({
+    Name     = "Print Position",
     Callback = function()
         local char = game.Players.LocalPlayer.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
             local pos = char.HumanoidRootPart.Position
-            print(string.format("[PotatoUI] Pos: X=%.2f Y=%.2f Z=%.2f", pos.X, pos.Y, pos.Z))
+            print(string.format("[Test] Pos: X=%.2f Y=%.2f Z=%.2f", pos.X, pos.Y, pos.Z))
         else
-            print("[PotatoUI] No character found")
+            print("[Test] No character found")
         end
     end
 })
 
-tab4:CreateButton({
+tab5:Button({
     Name     = "Print All Players",
     Callback = function()
-        print("[PotatoUI] Players in server:")
+        print("[Test] Players in server:")
         for _, p in ipairs(game.Players:GetPlayers()) do
             print("  →", p.Name, "| UserId:", p.UserId)
         end
     end
 })
 
-tab4:CreateSeparator()
+tab5:Divider()
 
-tab4:CreateButton({
-    Name     = "Run All Tests (console dump)",
+tab5:Button({
+    Name     = "Run Full Dump",
+    Style    = "Primary",
     Callback = function()
         print("══════════════════════════════")
-        print("  PotatoUI Full Test Dump")
+        print("  AirFlow Test Dump")
         print("══════════════════════════════")
         print("PlaceId:", game.PlaceId)
         print("Player:", game.Players.LocalPlayer.Name)
-        print("Toggle A:", tog1:GetValue())
-        print("Toggle B:", tog2:GetValue())
-        print("Speed slider:", spd:GetValue())
-        print("Jump slider:", jp:GetValue())
-        print("Dropdown:", drop:GetValue())
-        print("Textbox:", box:GetValue())
+        print("Toggle A:", tog1:Get())
+        print("Toggle B:", tog2:Get())
+        print("Speed slider:", spd:Get())
+        print("Jump slider:", jp:Get())
+        print("Dropdown:", drop:Get())
         print("══════════════════════════════")
     end
 })
 
-print("[PotatoUI] Test script loaded via loader.lua — all tabs ready")
+print("[Test] Loaded via loader.lua — AirFlow UI ready")
