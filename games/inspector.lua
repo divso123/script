@@ -1,7 +1,7 @@
 -- inspector.lua
 -- Universal Object Inspector v3 | PotatoUI port
 
-local BASE = "https://raw.githubusercontent.com/divso123/script/main/games/"
+local BASE = "https://raw.githubusercontent.com/divso123/script/main/"
 local UI   = loadstring(game:HttpGet(BASE .. "UI.lua"))()
 
 local Players     = game:GetService("Players")
