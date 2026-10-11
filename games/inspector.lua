@@ -198,7 +198,7 @@ end
 
 -- ── UI ────────────────────────────────────────────────────────────────────────
 local Window = UI:Window({
-    Title    = "PotatoUI",
+    Title    = "DivineSoul",
     SubTitle = "Object Inspector",
     Theme    = "Midnight",
 })
@@ -308,6 +308,7 @@ ScanTab:Button({
             ScanOutputLabel:Set(latestReport)
         end
         log(ok and "SCAN SUCCESS." or "SCAN FAILED.")
+        -- auto-switch to Output tab feedback handled via label
     end,
 })
 
@@ -344,7 +345,10 @@ ScanTab:Button({
 -- ── Tab: Output ───────────────────────────────────────────────────────────────
 local OutTab = Window:Tab({ Title = "Output", Icon = "terminal" })
 OutTab:Section("Last Scan Result")
-ScanOutputLabel = OutTab:Label({ Text = "(run a scan to see results)" })
+ScanOutputLabel = OutTab:Paragraph({
+    Name    = "Result",
+    Content = "(run a scan to see results)",
+})
 
 -- ── Init ──────────────────────────────────────────────────────────────────────
 log("========================================")
