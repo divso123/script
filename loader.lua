@@ -12,5 +12,5 @@ local script_name = games[game.PlaceId]
 if script_name then
     loadstring(game:HttpGet(BASE .. script_name))()
 else
-    warn("[PotatoUI] No script for this game — PlaceId: " .. game.PlaceId)
+    warn("Game is not Supported! — PlaceId: " .. game.PlaceId)
 end
