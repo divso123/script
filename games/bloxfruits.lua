@@ -1,8 +1,3 @@
-Potato oils up — gng it's running frfr, UI loaded clean, Combat tab's there. "Nothing here yet" means `AddSection` / the controls didn't render — the UI lib's API calls don't match what `UI.lua` actually exposes. Looking at the source, it's `Window:Tab()` not `Window:CreateTab()`, and sections/controls hang off the tab directly.
-
-**Title:** bloxfruits.lua — fixed API calls to match actual UI.lua
-
-```lua
 -- bloxfruits.lua
 -- Blox Fruits | PlaceId: 2753915549
 
@@ -258,4 +253,3 @@ Misc:Dropdown({
     Default  = "Midnight",
     Callback = function(val) UI:SetTheme(val) end,
 })
-```
