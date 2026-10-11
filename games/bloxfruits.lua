@@ -1,85 +1,72 @@
+Potato oils up — gng it's running frfr, UI loaded clean, Combat tab's there. "Nothing here yet" means `AddSection` / the controls didn't render — the UI lib's API calls don't match what `UI.lua` actually exposes. Looking at the source, it's `Window:Tab()` not `Window:CreateTab()`, and sections/controls hang off the tab directly.
+
+**Title:** bloxfruits.lua — fixed API calls to match actual UI.lua
+
+```lua
 -- bloxfruits.lua
 -- Blox Fruits | PlaceId: 2753915549
--- Loads PotatoUI and builds a Blox Fruits utility panel
 
-local BASE   = "https://raw.githubusercontent.com/divso123/script/main/"
-local UI     = loadstring(game:HttpGet(BASE .. "UI.lua"))()
+local BASE = "https://raw.githubusercontent.com/divso123/script/main/"
+local UI   = loadstring(game:HttpGet(BASE .. "UI.lua"))()
 
-local Players      = game:GetService("Players")
-local RunService   = game:GetService("RunService")
-local LocalPlayer  = Players.LocalPlayer
-local Character    = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local Humanoid     = Character:WaitForChild("Humanoid")
+local Players     = game:GetService("Players")
+local UIS         = game:GetService("UserInputService")
+local RunService  = game:GetService("RunService")
+local Lighting    = game:GetService("Lighting")
+local TeleportSvc = game:GetService("TeleportService")
+local LocalPlayer = Players.LocalPlayer
 
--- ── Window ─────────────────────────────────────────────────────────────────
-local Window = UI:CreateWindow({
-    Title   = "PotatoUI",
+-- ── Window ───────────────────────────────────────────────────────────────────
+local Window = UI:Window({
+    Title    = "PotatoUI",
     SubTitle = "Blox Fruits",
-    Theme   = "Midnight",
-    Size    = UDim2.fromOffset(560, 400),
-    Icon    = UI.Assets.Logo,
+    Theme    = "Midnight",
 })
 
--- ── Tab: Combat ─────────────────────────────────────────────────────────────
-local CombatTab = Window:CreateTab({ Title = "Combat", Icon = "sword" })
-local CombatSection = CombatTab:AddSection("Auto Combat")
+-- ── Tab: Combat ───────────────────────────────────────────────────────────────
+local Combat = Window:Tab({ Title = "Combat", Icon = "sword" })
+Combat:Section("Auto Combat")
 
-local autoFarmEnabled = false
-local autoFarmConn    = nil
+local farmConn = nil
 
-CombatSection:Toggle({
+Combat:Toggle({
     Name    = "Auto Farm",
-    Desc    = "Attacks nearest NPC in range",
+    Desc    = "Attacks nearest NPC within range",
     Default = false,
     Flag    = "AutoFarm",
-    Callback = function(state)
-        autoFarmEnabled = state
-        if state then
-            autoFarmConn = RunService.Heartbeat:Connect(function()
-                local char = LocalPlayer.Character
-                if not char then return end
-                local root = char:FindFirstChild("HumanoidRootPart")
-                if not root then return end
-
-                local nearest, nearestDist = nil, math.huge
-                for _, model in ipairs(workspace:GetDescendants()) do
-                    if model:IsA("Model") and model ~= char then
-                        local h = model:FindFirstChildOfClass("Humanoid")
-                        local r = model:FindFirstChild("HumanoidRootPart")
-                        if h and h.Health > 0 and r then
-                            -- skip other players
-                            if not Players:GetPlayerFromCharacter(model) then
-                                local d = (root.Position - r.Position).Magnitude
-                                if d < nearestDist then
-                                    nearestDist = d
-                                    nearest = model
-                                end
-                            end
-                        end
+    Callback = function(on)
+        if farmConn then farmConn:Disconnect(); farmConn = nil end
+        if not on then return end
+        farmConn = RunService.Heartbeat:Connect(function()
+            local char = LocalPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if not root then return end
+            local range = (UI.Flags.FarmRange and UI.Flags.FarmRange.Value) or 50
+            local best, bestD = nil, math.huge
+            for _, m in ipairs(workspace:GetDescendants()) do
+                if m:IsA("Model") and m ~= char
+                    and not Players:GetPlayerFromCharacter(m) then
+                    local h = m:FindFirstChildOfClass("Humanoid")
+                    local r = m:FindFirstChild("HumanoidRootPart")
+                    if h and h.Health > 0 and r then
+                        local d = (root.Position - r.Position).Magnitude
+                        if d < bestD then bestD = d; best = m end
                     end
                 end
-
-                if nearest and nearestDist < 50 then
-                    local tool = char:FindFirstChildOfClass("Tool")
-                    if tool and tool:FindFirstChild("Handle") then
-                        local atk = tool:FindFirstChild("Activated")
-                            or tool:FindFirstChild("Attack")
-                        if atk then
-                            pcall(function() atk:FireServer() end)
-                        end
-                    end
-                end
-            end)
-        else
-            if autoFarmConn then
-                autoFarmConn:Disconnect()
-                autoFarmConn = nil
             end
-        end
+            if best and bestD <= range then
+                local tool = char:FindFirstChildOfClass("Tool")
+                if tool then
+                    local atk = tool:FindFirstChild("Activated")
+                           or  tool:FindFirstChild("Attack")
+                    if atk then pcall(function() atk:FireServer() end) end
+                end
+            end
+        end)
     end,
 })
 
-CombatSection:Slider({
+Combat:Slider({
     Name    = "Farm Range",
     Min     = 10,
     Max     = 200,
@@ -87,50 +74,47 @@ CombatSection:Slider({
     Default = 50,
     Suffix  = " studs",
     Flag    = "FarmRange",
-    Callback = function(val)
-        -- range is read live from Flags in the farm loop above
-        -- update the closure used in Heartbeat
-    end,
+    Callback = function(_) end,
 })
 
-CombatSection:Toggle({
+Combat:Toggle({
     Name    = "Auto Collect Fruit",
-    Desc    = "Walks to and eats any fruit on the map",
+    Desc    = "Walks toward any fruit on the map",
     Default = false,
     Flag    = "AutoFruit",
-    Callback = function(state)
-        if state then
-            task.spawn(function()
-                while UI.Flags.AutoFruit and UI.Flags.AutoFruit.Value do
-                    local char = LocalPlayer.Character
-                    local root = char and char:FindFirstChild("HumanoidRootPart")
-                    if root then
-                        for _, obj in ipairs(workspace:GetDescendants()) do
-                            if obj.Name == "Blox_Fruit" or obj.Name:find("Fruit") then
-                                local pos = obj:IsA("BasePart") and obj.Position
-                                    or (obj:IsA("Model") and obj:GetPivot().Position)
-                                if pos and (root.Position - pos).Magnitude < 300 then
-                                    LocalPlayer.Character.Humanoid:MoveTo(pos)
-                                    task.wait(2.5)
-                                    break
-                                end
+    Callback = function(on)
+        if not on then return end
+        task.spawn(function()
+            while UI.Flags.AutoFruit and UI.Flags.AutoFruit.Value do
+                local char = LocalPlayer.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                local hum  = char and char:FindFirstChildOfClass("Humanoid")
+                if root and hum then
+                    for _, obj in ipairs(workspace:GetDescendants()) do
+                        local isFruit = obj.Name == "Blox_Fruit"
+                            or obj.Name:lower():find("fruit")
+                        if isFruit then
+                            local pos = obj:IsA("BasePart") and obj.Position
+                                     or (obj:IsA("Model") and obj:GetPivot().Position)
+                            if pos and (root.Position - pos).Magnitude < 400 then
+                                hum:MoveTo(pos)
+                                task.wait(2.5)
+                                break
                             end
                         end
                     end
-                    task.wait(1)
                 end
-            end)
-        end
+                task.wait(1)
+            end
+        end)
     end,
 })
 
--- ── Tab: Player ──────────────────────────────────────────────────────────────
-local PlayerTab     = Window:CreateTab({ Title = "Player", Icon = "user" })
-local MovementSec   = PlayerTab:AddSection("Movement")
+-- ── Tab: Player ───────────────────────────────────────────────────────────────
+local Player = Window:Tab({ Title = "Player", Icon = "user" })
+Player:Section("Movement")
 
-local originalSpeed = nil
-
-MovementSec:Slider({
+Player:Slider({
     Name    = "Walk Speed",
     Min     = 16,
     Max     = 300,
@@ -138,13 +122,13 @@ MovementSec:Slider({
     Default = 16,
     Flag    = "WalkSpeed",
     Callback = function(val)
-        local char = LocalPlayer.Character
-        local hum  = char and char:FindFirstChildOfClass("Humanoid")
+        local hum = LocalPlayer.Character
+            and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         if hum then hum.WalkSpeed = val end
     end,
 })
 
-MovementSec:Slider({
+Player:Slider({
     Name    = "Jump Power",
     Min     = 50,
     Max     = 500,
@@ -152,92 +136,71 @@ MovementSec:Slider({
     Default = 50,
     Flag    = "JumpPower",
     Callback = function(val)
-        local char = LocalPlayer.Character
-        local hum  = char and char:FindFirstChildOfClass("Humanoid")
+        local hum = LocalPlayer.Character
+            and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         if hum then hum.JumpPower = val end
     end,
 })
 
-MovementSec:Toggle({
+Player:Toggle({
     Name    = "Infinite Jump",
     Default = false,
     Flag    = "InfJump",
-    Callback = function(state)
-        LocalPlayer:SetAttribute("InfJump", state)
-    end,
+    Callback = function(_) end,
 })
 
--- re-apply walk speed and infinite jump on respawn
-LocalPlayer.CharacterAdded:Connect(function(char)
-    local hum = char:WaitForChild("Humanoid")
-    if UI.Flags.WalkSpeed then
-        hum.WalkSpeed = UI.Flags.WalkSpeed.Value
-    end
-    if UI.Flags.JumpPower then
-        hum.JumpPower = UI.Flags.JumpPower.Value
-    end
-end)
-
-game:GetService("UserInputService").JumpRequest:Connect(function()
+UIS.JumpRequest:Connect(function()
     if UI.Flags.InfJump and UI.Flags.InfJump.Value then
-        local char = LocalPlayer.Character
-        local hum  = char and char:FindFirstChildOfClass("Humanoid")
+        local hum = LocalPlayer.Character
+            and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
     end
 end)
 
--- ── Tab: Visual ──────────────────────────────────────────────────────────────
-local VisualTab  = Window:CreateTab({ Title = "Visual", Icon = "eye" })
-local EspSec     = VisualTab:AddSection("ESP")
+LocalPlayer.CharacterAdded:Connect(function(char)
+    local hum = char:WaitForChild("Humanoid")
+    if UI.Flags.WalkSpeed then hum.WalkSpeed = UI.Flags.WalkSpeed.Value end
+    if UI.Flags.JumpPower then hum.JumpPower = UI.Flags.JumpPower.Value end
+end)
+
+-- ── Tab: Visual ───────────────────────────────────────────────────────────────
+local Visual = Window:Tab({ Title = "Visual", Icon = "eye" })
+Visual:Section("ESP")
 
 local espHighlights = {}
 
 local function clearEsp()
-    for _, h in pairs(espHighlights) do
-        pcall(function() h:Destroy() end)
-    end
+    for _, h in pairs(espHighlights) do pcall(function() h:Destroy() end) end
     table.clear(espHighlights)
 end
 
-local function buildEsp()
-    clearEsp()
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then
-            local char = plr.Character
-            if char then
-                local h = Instance.new("Highlight")
-                h.FillColor       = Color3.fromRGB(255, 60, 60)
-                h.OutlineColor    = Color3.fromRGB(255, 255, 255)
-                h.FillTransparency    = 0.5
-                h.OutlineTransparency = 0
-                h.Adornee = char
-                h.Parent  = char
-                espHighlights[plr.UserId] = h
-            end
-        end
-    end
+local function addEspToChar(char, userId)
+    if not char then return end
+    local h = Instance.new("Highlight")
+    h.FillColor           = Color3.fromRGB(255, 60, 60)
+    h.OutlineColor        = Color3.fromRGB(255, 255, 255)
+    h.FillTransparency    = 0.5
+    h.OutlineTransparency = 0
+    h.Adornee = char
+    h.Parent  = char
+    espHighlights[userId] = h
 end
 
-VisualTab:Toggle({
+Visual:Toggle({
     Name    = "Player ESP",
     Desc    = "Highlights all other players",
     Default = false,
-    Flag    = "PlayerEsp",
-    Callback = function(state)
-        if state then
-            buildEsp()
-            Players.PlayerAdded:Connect(function(plr)
-                if not (UI.Flags.PlayerEsp and UI.Flags.PlayerEsp.Value) then return end
-                plr.CharacterAdded:Connect(function(char)
-                    task.wait(0.5)
-                    local h = Instance.new("Highlight")
-                    h.FillColor    = Color3.fromRGB(255, 60, 60)
-                    h.OutlineColor = Color3.fromRGB(255, 255, 255)
-                    h.FillTransparency    = 0.5
-                    h.OutlineTransparency = 0
-                    h.Adornee = char
-                    h.Parent  = char
-                    espHighlights[plr.UserId] = h
+    Flag    = "PlayerESP",
+    Callback = function(on)
+        if on then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer then addEspToChar(p.Character, p.UserId) end
+            end
+            Players.PlayerAdded:Connect(function(p)
+                p.CharacterAdded:Connect(function(c)
+                    if UI.Flags.PlayerESP and UI.Flags.PlayerESP.Value then
+                        task.wait(0.5); addEspToChar(c, p.UserId)
+                    end
                 end)
             end)
         else
@@ -246,53 +209,45 @@ VisualTab:Toggle({
     end,
 })
 
-VisualTab:Toggle({
+Visual:Toggle({
     Name    = "Full Bright",
-    Desc    = "Sets ambient lighting to max",
     Default = false,
     Flag    = "FullBright",
-    Callback = function(state)
-        local lighting = game:GetService("Lighting")
-        if state then
-            lighting.Brightness   = 2
-            lighting.ClockTime    = 14
-            lighting.FogEnd       = 100000
-            lighting.GlobalShadows = false
-            lighting.Ambient      = Color3.fromRGB(178, 178, 178)
-        else
-            lighting.Brightness   = 1
-            lighting.ClockTime    = 14
-            lighting.FogEnd       = 100000
-            lighting.GlobalShadows = true
-            lighting.Ambient      = Color3.fromRGB(70, 70, 70)
-        end
+    Callback = function(on)
+        Lighting.Brightness    = on and 2   or 1
+        Lighting.ClockTime     = on and 14  or 14
+        Lighting.GlobalShadows = not on
+        Lighting.Ambient       = on
+            and Color3.fromRGB(178, 178, 178)
+            or  Color3.fromRGB(70, 70, 70)
     end,
 })
 
--- ── Tab: Misc ────────────────────────────────────────────────────────────────
-local MiscTab  = Window:CreateTab({ Title = "Misc", Icon = "settings" })
-local MiscSec  = MiscTab:AddSection("Utilities")
+-- ── Tab: Misc ─────────────────────────────────────────────────────────────────
+local Misc = Window:Tab({ Title = "Misc", Icon = "settings" })
+Misc:Section("Utilities")
 
-MiscSec:Button({
+Misc:Button({
     Name     = "Rejoin Server",
     Callback = function()
-        game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
+        TeleportSvc:Teleport(game.PlaceId, LocalPlayer)
     end,
 })
 
-MiscSec:Button({
-    Name     = "Copy Player Position",
+Misc:Button({
+    Name     = "Copy Position",
+    Desc     = "Copies HRP position to clipboard",
     Callback = function()
         local root = LocalPlayer.Character
             and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if root then
             local p = root.Position
-            setclipboard(string.format("Vector3.new(%.2f, %.2f, %.2f)", p.X, p.Y, p.Z))
+            setclipboard(("%.2f, %.2f, %.2f"):format(p.X, p.Y, p.Z))
         end
     end,
 })
 
-MiscSec:Dropdown({
+Misc:Dropdown({
     Name    = "Theme",
     Options = (function()
         local t = {}
@@ -301,7 +256,6 @@ MiscSec:Dropdown({
         return t
     end)(),
     Default  = "Midnight",
-    Callback = function(val)
-        UI:SetTheme(val)
-    end,
+    Callback = function(val) UI:SetTheme(val) end,
 })
+```
