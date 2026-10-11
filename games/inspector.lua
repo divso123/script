@@ -1,18 +1,16 @@
 -- inspector.lua
 -- Universal Object Inspector v3 | PotatoUI port
--- PlaceId: universal — add to loader.lua manually or call directly
 
 local BASE = "https://raw.githubusercontent.com/divso123/script/main/"
 local UI   = loadstring(game:HttpGet(BASE .. "UI.lua"))()
 
-local Players  = game:GetService("Players")
-local CoreGui  = game:GetService("CoreGui")
+local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 -- ── State ────────────────────────────────────────────────────────────────────
-local paths       = {}
-local scanDepth   = 1
-local maxMatches  = 10
+local paths        = {}
+local scanDepth    = 1
+local maxMatches   = 10
 local latestReport = ""
 
 -- ── Logging ──────────────────────────────────────────────────────────────────
@@ -20,7 +18,7 @@ local function log(msg)
     print(("[%s] [Inspector] %s"):format(os.date("%H:%M:%S"), tostring(msg)))
 end
 
--- ── Path resolver (unchanged logic) ─────────────────────────────────────────
+-- ── Path resolver ─────────────────────────────────────────────────────────────
 local function getRoot(name)
     if name:lower() == "game"      then return game      end
     if name:lower() == "workspace" then return workspace end
@@ -47,17 +45,20 @@ end
 local function resolvePath(path)
     local segments = splitPath(path)
     if #segments == 0 then return {} end
-    local current = {game}
+    local current = {}
     for idx, seg in ipairs(segments) do
         local next = {}
-        for _, parent in ipairs(current) do
-            if idx == 1 then
-                local root = getRoot(seg)
-                if root then table.insert(next, root) end
-            else
-                for _, child in ipairs(parent:GetChildren()) do
-                    if matchesWildcard(child.Name, seg) then
-                        table.insert(next, child)
+        if idx == 1 then
+            local root = getRoot(seg)
+            if root then table.insert(next, root) end
+        else
+            for _, parent in ipairs(current) do
+                local ok, children = pcall(function() return parent:GetChildren() end)
+                if ok then
+                    for _, child in ipairs(children) do
+                        if matchesWildcard(child.Name, seg) then
+                            table.insert(next, child)
+                        end
                     end
                 end
             end
@@ -68,7 +69,7 @@ local function resolvePath(path)
     return current
 end
 
--- ── Value / interaction describers (unchanged logic) ─────────────────────────
+-- ── Value / interaction describers ───────────────────────────────────────────
 local SUPPORTED_VALUES = {
     StringValue=true, IntValue=true, NumberValue=true, BoolValue=true,
     ObjectValue=true, Vector3Value=true, CFrameValue=true, Color3Value=true,
@@ -88,16 +89,18 @@ local function collectInteractions(obj, lines, indent)
         table.insert(lines, indent.."[ProximityPrompt] ActionText="..obj.ActionText.." | ObjectText="..obj.ObjectText.." | HoldDuration="..obj.HoldDuration)
     elseif c == "ClickDetector" then
         table.insert(lines, indent.."[ClickDetector] MaxActivationDistance="..obj.MaxActivationDistance)
-    elseif c == "RemoteEvent"    then table.insert(lines, indent.."[RemoteEvent]")
-    elseif c == "RemoteFunction" then table.insert(lines, indent.."[RemoteFunction]")
-    elseif c == "BindableEvent"  then table.insert(lines, indent.."[BindableEvent]")
+    elseif c == "RemoteEvent"      then table.insert(lines, indent.."[RemoteEvent]")
+    elseif c == "RemoteFunction"   then table.insert(lines, indent.."[RemoteFunction]")
+    elseif c == "BindableEvent"    then table.insert(lines, indent.."[BindableEvent]")
     elseif c == "BindableFunction" then table.insert(lines, indent.."[BindableFunction]")
     end
 end
 
 local function inspectTree(obj, depth, indent, lines)
     if depth > scanDepth then return end
-    for _, child in ipairs(obj:GetChildren()) do
+    local ok, children = pcall(function() return obj:GetChildren() end)
+    if not ok then return end
+    for _, child in ipairs(children) do
         local val  = describeValue(child)
         local line = indent.."- "..child.Name.." ["..child.ClassName.."]"
         if val then line = line.." = "..val end
@@ -115,16 +118,20 @@ local function describeObject(obj)
         "",
         "Attributes:",
     }
-    local attrs = obj:GetAttributes()
-    local names = {}
-    for k in pairs(attrs) do table.insert(names, k) end
-    table.sort(names)
-    if #names == 0 then
-        table.insert(lines, "  (none)")
-    else
-        for _, k in ipairs(names) do
-            table.insert(lines, "  "..k.." = "..tostring(attrs[k]))
+    local ok, attrs = pcall(function() return obj:GetAttributes() end)
+    if ok and attrs then
+        local names = {}
+        for k in pairs(attrs) do table.insert(names, k) end
+        table.sort(names)
+        if #names == 0 then
+            table.insert(lines, "  (none)")
+        else
+            for _, k in ipairs(names) do
+                table.insert(lines, "  "..k.." = "..tostring(attrs[k]))
+            end
         end
+    else
+        table.insert(lines, "  (none)")
     end
     local ownVal = describeValue(obj)
     if ownVal then
@@ -134,12 +141,20 @@ local function describeObject(obj)
     end
     table.insert(lines, "")
     table.insert(lines, "Children:")
-    if #obj:GetChildren() == 0 then
+    local ok2, childList = pcall(function() return obj:GetChildren() end)
+    if not ok2 or #childList == 0 then
         table.insert(lines, "  (none)")
     else
         inspectTree(obj, 0, "  ", lines)
     end
     return table.concat(lines, "\n")
+end
+
+local function buildPathListText()
+    if #paths == 0 then return "(no paths)" end
+    local list = {}
+    for i, p in ipairs(paths) do table.insert(list, i..". "..p) end
+    return table.concat(list, "\n")
 end
 
 local function scan()
@@ -181,18 +196,17 @@ local function scan()
     return table.concat(reports, "\n\n")
 end
 
--- ── UI ───────────────────────────────────────────────────────────────────────
+-- ── UI ────────────────────────────────────────────────────────────────────────
 local Window = UI:Window({
     Title    = "PotatoUI",
     SubTitle = "Object Inspector",
     Theme    = "Midnight",
 })
 
--- ── Tab: Paths ───────────────────────────────────────────────────────────────
+-- ── Tab: Paths ────────────────────────────────────────────────────────────────
 local PathsTab = Window:Tab({ Title = "Paths", Icon = "search" })
 PathsTab:Section("Add Path")
 
--- path input via TextInput if supported, else a manual flag approach
 local currentInput = ""
 
 PathsTab:Input({
@@ -205,26 +219,32 @@ PathsTab:Input({
     end,
 })
 
+-- FIX: store the label ref, use :Set() not SetText()
+local PathListLabel -- forward declare
+
 PathsTab:Button({
     Name     = "Add Path",
     Desc     = "Adds the path above to the scan list",
     Callback = function()
-        local path = currentInput:gsub("^%s+",""):gsub("%s+$","")
-        if path == "" then return end
+        -- FIX: also grab directly from Flags in case callback hasn't fired
+        local raw = currentInput
+        if UI.Flags and UI.Flags.PathInput then
+            local flagVal = UI.Flags.PathInput
+            if type(flagVal) == "string" and flagVal ~= "" then
+                raw = flagVal
+            end
+        end
+        local path = raw:gsub("^%s+",""):gsub("%s+$","")
+        if path == "" then log("ADD FAILED: empty path.") return end
         for _, existing in ipairs(paths) do
-            if existing == path then return end
+            if existing == path then
+                log("ADD SKIPPED (duplicate): "..path) return
+            end
         end
         table.insert(paths, path)
         log("PATH ADDED: "..path)
-        -- refresh the list label
-        local list = {}
-        for i, p in ipairs(paths) do
-            table.insert(list, i..". "..p)
-        end
-        if UI.Flags.PathList then
-            UI.Flags.PathList:SetText(
-                #paths == 0 and "(no paths)" or table.concat(list, "\n")
-            )
+        if PathListLabel then
+            PathListLabel:Set(buildPathListText())
         end
     end,
 })
@@ -234,17 +254,16 @@ PathsTab:Button({
     Callback = function()
         table.clear(paths)
         log("ALL PATHS CLEARED.")
-        if UI.Flags.PathList then
-            UI.Flags.PathList:SetText("(no paths)")
+        if PathListLabel then
+            PathListLabel:Set("(no paths)")
         end
     end,
 })
 
 PathsTab:Section("Active Paths")
 
-PathsTab:Label({
+PathListLabel = PathsTab:Label({   -- FIX: capture the return value
     Text = "(no paths)",
-    Flag = "PathList",
 })
 
 -- ── Tab: Scan ─────────────────────────────────────────────────────────────────
@@ -252,13 +271,13 @@ local ScanTab = Window:Tab({ Title = "Scan", Icon = "zap" })
 ScanTab:Section("Settings")
 
 ScanTab:Slider({
-    Name    = "Scan Depth",
-    Min     = 0,
-    Max     = 20,
-    Step    = 1,
-    Default = 1,
-    Suffix  = " levels",
-    Flag    = "ScanDepth",
+    Name     = "Scan Depth",
+    Min      = 0,
+    Max      = 20,
+    Step     = 1,
+    Default  = 1,
+    Suffix   = " levels",
+    Flag     = "ScanDepth",
     Callback = function(val)
         scanDepth = val
         log("DEPTH: "..val)
@@ -266,13 +285,13 @@ ScanTab:Slider({
 })
 
 ScanTab:Slider({
-    Name    = "Max Matches",
-    Min     = 1,
-    Max     = 100,
-    Step    = 1,
-    Default = 10,
-    Suffix  = " matches",
-    Flag    = "MaxMatches",
+    Name     = "Max Matches",
+    Min      = 1,
+    Max      = 100,
+    Step     = 1,
+    Default  = 10,
+    Suffix   = " matches",
+    Flag     = "MaxMatches",
     Callback = function(val)
         maxMatches = val
         log("MAX MATCHES: "..val)
@@ -281,6 +300,8 @@ ScanTab:Slider({
 
 ScanTab:Section("Run")
 
+local ScanOutputLabel -- forward declare
+
 ScanTab:Button({
     Name     = "Scan",
     Desc     = "Resolve all paths and inspect matched objects",
@@ -288,8 +309,8 @@ ScanTab:Button({
         log("SCAN BUTTON PRESSED.")
         local ok, result = pcall(scan)
         latestReport = ok and result or ("SCAN ERROR:\n\n"..tostring(result))
-        if UI.Flags.ScanOutput then
-            UI.Flags.ScanOutput:SetText(latestReport)
+        if ScanOutputLabel then
+            ScanOutputLabel:Set(latestReport)   -- FIX: :Set() not :SetText()
         end
         log(ok and "SCAN SUCCESS." or "SCAN FAILED.")
     end,
@@ -318,8 +339,8 @@ ScanTab:Button({
     Name     = "Clear Output",
     Callback = function()
         latestReport = ""
-        if UI.Flags.ScanOutput then
-            UI.Flags.ScanOutput:SetText("(run a scan to see results)")
+        if ScanOutputLabel then
+            ScanOutputLabel:Set("(run a scan to see results)")   -- FIX
         end
         log("OUTPUT CLEARED.")
     end,
@@ -329,9 +350,8 @@ ScanTab:Button({
 local OutTab = Window:Tab({ Title = "Output", Icon = "terminal" })
 OutTab:Section("Last Scan Result")
 
-OutTab:Label({
+ScanOutputLabel = OutTab:Label({   -- FIX: capture the return value
     Text = "(run a scan to see results)",
-    Flag = "ScanOutput",
 })
 
 -- ── Init ──────────────────────────────────────────────────────────────────────
