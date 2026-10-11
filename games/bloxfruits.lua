@@ -13,7 +13,7 @@ local LocalPlayer = Players.LocalPlayer
 
 -- ── Window ───────────────────────────────────────────────────────────────────
 local Window = UI:Window({
-    Title    = "PotatoUI",
+    Title    = "DivineSoul",
     SubTitle = "Blox Fruits",
     Theme    = "Midnight",
 })
