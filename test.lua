@@ -3,7 +3,7 @@
 -- UI.lua must be live on your repo
 
 local UI = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/YOURNAME/PotatoUI/main/UI.lua"
+    "https://raw.githubusercontent.com/divso123/script/main/UI.lua"
 ))()
 
 -- ══════════════════════════════════════
