@@ -9,4 +9,8 @@ All scripts in this repo use **only** the bundled `UI.lua` — no Rayfield, no O
 
 Paste this into your executor:
 
+Main:
 loadstring(game:HttpGet("https://raw.githubusercontent.com/divso123/script/main/loader.lua"))()
+
+Universal:
+loadstring(game:HttpGet("https://raw.githubusercontent.com/divso123/script/main/inspector.lua"))()
