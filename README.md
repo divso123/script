@@ -13,4 +13,4 @@ Main:
 loadstring(game:HttpGet("https://raw.githubusercontent.com/divso123/script/main/loader.lua"))()
 
 Universal:
-loadstring(game:HttpGet("https://raw.githubusercontent.com/divso123/script/main/inspector.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/divso123/script/main/games/inspector.lua"))()
