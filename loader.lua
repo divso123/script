@@ -1,8 +1,8 @@
 -- loader.lua
-local BASE = "https://raw.githubusercontent.com/YOURNAME/PotatoUI/main/games/"
+local BASE = "https://raw.githubusercontent.com/divso123/script/main/games/"
 
 local games = {
-    [2753915549] = "bloxfruits.lua",
+    [112274915308120] = "test.lua",
     [286090429]  = "arsenal.lua",
     [4924922222] = "brookhaven.lua",
     -- add PlaceId = "filename.lua" for each game
