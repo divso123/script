@@ -207,7 +207,8 @@ local Window = UI:Window({
 local PathsTab = Window:Tab({ Title = "Paths", Icon = "search" })
 PathsTab:Section("Add Path")
 
-local currentInput = ""
+local currentInput  = ""
+local PathListLabel -- forward declare
 
 PathsTab:Input({
     Name        = "Path",
@@ -219,14 +220,11 @@ PathsTab:Input({
     end,
 })
 
--- FIX: store the label ref, use :Set() not SetText()
-local PathListLabel -- forward declare
-
 PathsTab:Button({
     Name     = "Add Path",
     Desc     = "Adds the path above to the scan list",
     Callback = function()
-        -- FIX: also grab directly from Flags in case callback hasn't fired
+        -- fallback: read flag directly in case callback hasn't fired
         local raw = currentInput
         if UI.Flags and UI.Flags.PathInput then
             local flagVal = UI.Flags.PathInput
@@ -261,10 +259,7 @@ PathsTab:Button({
 })
 
 PathsTab:Section("Active Paths")
-
-PathListLabel = PathsTab:Label({   -- FIX: capture the return value
-    Text = "(no paths)",
-})
+PathListLabel = PathsTab:Label({ Text = "(no paths)" })
 
 -- ── Tab: Scan ─────────────────────────────────────────────────────────────────
 local ScanTab = Window:Tab({ Title = "Scan", Icon = "zap" })
@@ -310,7 +305,7 @@ ScanTab:Button({
         local ok, result = pcall(scan)
         latestReport = ok and result or ("SCAN ERROR:\n\n"..tostring(result))
         if ScanOutputLabel then
-            ScanOutputLabel:Set(latestReport)   -- FIX: :Set() not :SetText()
+            ScanOutputLabel:Set(latestReport)
         end
         log(ok and "SCAN SUCCESS." or "SCAN FAILED.")
     end,
@@ -340,7 +335,7 @@ ScanTab:Button({
     Callback = function()
         latestReport = ""
         if ScanOutputLabel then
-            ScanOutputLabel:Set("(run a scan to see results)")   -- FIX
+            ScanOutputLabel:Set("(run a scan to see results)")
         end
         log("OUTPUT CLEARED.")
     end,
@@ -349,10 +344,7 @@ ScanTab:Button({
 -- ── Tab: Output ───────────────────────────────────────────────────────────────
 local OutTab = Window:Tab({ Title = "Output", Icon = "terminal" })
 OutTab:Section("Last Scan Result")
-
-ScanOutputLabel = OutTab:Label({   -- FIX: capture the return value
-    Text = "(run a scan to see results)",
-})
+ScanOutputLabel = OutTab:Label({ Text = "(run a scan to see results)" })
 
 -- ── Init ──────────────────────────────────────────────────────────────────────
 log("========================================")
