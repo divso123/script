@@ -3,8 +3,6 @@ local BASE = "https://raw.githubusercontent.com/divso123/script/main/games/"
 
 local games = {
     [79389059854988] = "myanimemine.lua",
-    [2753915549] = "bloxfruits.lua",
-    [4924922222] = "brookhaven.lua",
     -- add PlaceId = "filename.lua" for each game
 }
 
